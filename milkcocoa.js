@@ -23,13 +23,59 @@
 		return new DataStore(this, path);
 	}
 
-	MilkCocoa.prototype.login = function(provider, cb) {
+	MilkCocoa.prototype.addAccount = function(email, password, options, cb) {
+        if(options) options = {};
+        this.firebase.createUser({
+            "email": email,
+            "password": password
+        }, function(error, userData) {
+            if (error) {
+                switch (error.code) {
+                    case "EMAIL_TAKEN":
+                        console.log("The new user account cannot be created because the email is already in use.");
+                        cb(1, null);
+                        break;
+                    case "INVALID_EMAIL":
+                        console.log("The specified email is not a valid email.");
+                        cb(2, null);
+                        break;
+                    default:
+                        cb(3, null);
+                        console.log("Error creating user:", error);
+                }
+            } else {
+                cb(null, userData);
+                console.log("Successfully created user account with uid:", userData.uid);
+            }
+        });
+    }
+
+	MilkCocoa.prototype.login = function(email, password, cb) {
+        this.firebase.authWithPassword({
+            "email": email,
+            "password": password
+        }, function(error, authData) {
+            if (error) {
+                console.log("Login Failed!", error);
+                cb(error, null);
+            } else {
+                console.log("Authenticated successfully with payload:", authData);
+                cb(null, authData);
+            }
+        });
 	}
 
 	MilkCocoa.prototype.logout = function(cb) {
+        this.firebase.unauth();
 	}
 
 	MilkCocoa.prototype.getCurrentUser = function(cb) {
+        var authData = this.firebase.getAuth();
+        if(authData){
+            cb(null, authData);
+        } else {
+            cb(1, null);
+        }
 	}
 
     /*
@@ -155,35 +201,30 @@
 
 	DataStore.prototype.query = function() {
         if(this.path == "/") throw "Can't execute I/O to root.";
-        return new Query(this.firebase, this.path);
+        return this.firebase.child(this.path);
 	}
 
 
     /*
-    * Query
+    * Queryは完全にfirebase準拠. milkcocoaに寄せられず
+    *
+    * https://www.firebase.com/docs/web/api/query/
+    *
+    * on(eventType, callback, [cancelCallback], [context])
+    * off([eventType], [callback], [context])
+    * once(eventType, successCallback, [failureCallback], [context])
+    * orderByChild(key)
+    * orderByKey()
+    * orderByValue()
+    * orderByPriority()
+    * startAt(value, [key])
+    * endAt(value, [key])
+    * equalTo(value, [key])
+    * limitToFirst(limit)
+    * limitToLast(limit)
+    * limit(limit)
+    * ref()
     */
-	function Query(firebase, path) {
-        /* Queryできず */
-        if(path.length < 1) throw "invalid path";
-        this.firebase = firebase;
-        this.path = path;
-	}
-
-	Query.prototype.skip = function(_skip) {
-        return this.firebase.child(this.path).startAt(_skip);
-	}
-
-	Query.prototype.limit = function(_limit) {
-        return this.firebase.child(this.path).limitToFirst(_limit);
-	}
-
-	Query.prototype.sort = function(_sort) {
-        return this.firebase.child(this.path).orderedByPriority();
-	}
-
-	Query.prototype.done = function(cb) {
-        this.firebase.child(this.path).on("child_added", cb);
-	}
 
 	global.MilkCocoa = MilkCocoa;
 	global.myconsole = myconsole;
