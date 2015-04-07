@@ -175,22 +175,35 @@
                 var obj = {};
                 obj.id = childSnapshot.key();
                 obj.value = childSnapshot.val();
+
                 if(obj.value._type == event){
                     cb(null, obj);
-                } else {
-                    throw "wrong type "+event+" and "+obj.value._type;
+                } else if (obj.value.hasOwnProperty("_type")){
+                    console.log("query");
                 }
             });
         } else if (event == "set") {
-            // setのchild_addedになるケースが曲者
-            self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_changed", function(childSnapshot, prevChildName){
+            self.onCallbacks[self.path][event] = {};
+            self.onCallbacks[self.path][event]["added"] = this.firebase.child(self.path).on("child_added", function(childSnapshot, prevChildName){
                 var obj = {};
                 obj.id = childSnapshot.key();
                 obj.value = childSnapshot.val();
+
                 if(obj.value._type == event){
                     cb(null, obj);
-                } else {
-                    throw "wrong type "+obj.value._type+" and "+event;
+                } else if (obj.value.hasOwnProperty("_type")){
+                    console.log("query");
+                }
+            });
+            self.onCallbacks[self.path][event]["changed"] = this.firebase.child(self.path).on("child_changed", function(childSnapshot, prevChildName){
+                var obj = {};
+                obj.id = childSnapshot.key();
+                obj.value = childSnapshot.val();
+
+                if(obj.value._type == event){
+                    cb(null, obj);
+                } else if (obj.value.hasOwnProperty("_type")){
+                    console.log("query");
                 }
             });
         } else if (event == "remove") {

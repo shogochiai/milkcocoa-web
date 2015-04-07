@@ -8,7 +8,7 @@
     var removeInput = document.getElementById("remove");
 
     ds.on("push", function(err, data){
-        //console.log(data);
+        console.log(data);
     });
     ds.on("set", function(err, data){
         console.log(data);
@@ -41,7 +41,7 @@
         if(e.keyCode == 13) ds.remove(removeInput.value);
     });
 
-    ds.query({}).limit(2).done(function(data){
+    ds.query({}).limit(6).done(function(data){
         console.log(data);
         data.forEach(function(item){
             var p = document.createElement("p");
