@@ -32,7 +32,7 @@
         if(e.keyCode == 13) ds.push({data: pushInput.value});
     });
     setInput.addEventListener("keypress", function(e){
-        if(e.keyCode == 13) ds.set(setInput.value,{data: "hoge"});
+        if(e.keyCode == 13) ds.set(setInput.value,{data: setInput.value});
     });
     sendInput.addEventListener("keypress", function(e){
         if(e.keyCode == 13) ds.send({data: sendInput.value});
@@ -41,7 +41,12 @@
         if(e.keyCode == 13) ds.remove(removeInput.value);
     });
 
-    ds.query().done(function(data){
+    ds.query({}).limit(2).done(function(data){
         console.log(data);
+        data.forEach(function(item){
+            var p = document.createElement("p");
+            p.innerHTML = item.id;
+            document.getElementsByTagName("body")[0].appendChild(p);
+        });
     });
 }());

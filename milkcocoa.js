@@ -1,7 +1,4 @@
 (function(global){
-    /*
-    * Util
-    */
 	var myconsole = {
 		log : function(v1, v2) {
 			if(window.console) console.log(v1, v2);
@@ -10,17 +7,6 @@
 			if(window.console) console.error(v1, v2);
 		}
 	}
-    Object.prototype.values = function(){var o=this;var r=[];for(var k in o) if(o.hasOwnProperty(k)){r.push(o[k])}return r};
-    Object.prototype.keys   = function(){var o=this;var r=[];for(var k in o) if(o.hasOwnProperty(k)){r.push(  k )}return r};
-    function uniqueID() {
-      function s4() {
-        return Math.floor((1 + Math.random()) * 0x10000)
-          .toString(16)
-          .substring(1);
-      }
-      return s4() + s4() + s4() + s4() + s4() + s4() + s4() + s4();
-    }
-
 
     /*
     * MilkCocoa
@@ -116,10 +102,11 @@
         if(this.path == "/") throw "Can't execute I/O to root.";
         if(params.hasOwnProperty("id")) throw "push value cannot have id";
         params._type = "push";
-
+        var self = this;
         var pushedDS = this.firebase.child(self.path).push();
-        pushedDS.set(params);
         params.id = pushedDS.toString();
+
+        pushedDS.set(params);
         if(cb) cb(params);
 	}
 
@@ -127,15 +114,17 @@
         if(this.path == "/") throw "Can't execute I/O to root.";
         if(params == null || params.hasOwnProperty("id")) throw "invalid argument";
         params._type = "set";
-
-        this.firebase.child(self.path+"/"+id).set(params);
         params.id = id;
+
+        var self = this;
+        this.firebase.child(self.path+"/"+id).set(params);
         if(cb) cb(params);
 	}
 
 	DataStore.prototype.send = function(params, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
         params._type = "send";
+        params._date = Date.now();
 
         var self = this;
         this.pubnub.publish({channel : self.path, message : params});
@@ -144,7 +133,6 @@
 
 	DataStore.prototype.remove = function(id, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
-        params._type = "send";
 
         var self = this;
         if(cb) this.firebase.child(self.path+"/"+id).remove(cb);
@@ -190,7 +178,7 @@
                 if(obj.value._type == event){
                     cb(null, obj);
                 } else {
-                    throw "respond with wrong type";
+                    throw "wrong type "+event+" and "+obj.value._type;
                 }
             });
         } else if (event == "set") {
@@ -202,7 +190,7 @@
                 if(obj.value._type == event){
                     cb(null, obj);
                 } else {
-                    throw "respond with wrong type";
+                    throw "wrong type "+obj.value._type+" and "+event;
                 }
             });
         } else if (event == "remove") {
@@ -210,11 +198,7 @@
                 var obj = {};
                 obj.id = oldChildSnapshot.key();
                 obj.value = oldChildSnapshot.val();
-                if(obj.value._type == event){
-                    cb(null, obj);
-                } else {
-                    throw "respond with wrong type";
-                }
+                cb(null, obj);
             });
         }
 	}
@@ -267,42 +251,27 @@
     function Query(firebase, path, obj) {
         var self = this;
         if(obj) {
-            console.log(obj.values);
             self.firebase = firebase;
             self.path = path;
-            self.query = self.firebase.child(self.path).orderByPriority();
+            self.query = self.firebase.child(self.path);
         } else {
             throw "no query object";
         }
     }
 
-    Query.prototype.sort = function(str){
-        var self = this;
-        if(str == "asc"){
-            return self.query.orderByPriority();
-        } else if(str == "desc") {
-            return self.query.orderByPriority();
-        } else {
-            throw "invalid order identifier";
-        }
+    Query.prototype.limit = function(i){
+        this.query = this.query.limitToFirst(i);
+        return this;
     }
 
-    Query.prototype.limit = function(i){
-        var self = this;
-        if(self.asc){
-            self.query = self.query.limitToFirst(i);
-            return self.query;
-        } else {
-            self.query = self.query.limitToLast(i);
-            return self.query;
-        }
+    Query.prototype.skip = function(i){
+        this.query = this.query.startAt(i, "priority");
+        return this;
     }
 
     Query.prototype.done = function(cb){
         this.query.once("value", function(snap){
-            var obj = {};
-            obj[snap.key()] = snap.val();
-            cb(obj);
+            cb(snap.val());
         });
     }
 
