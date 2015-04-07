@@ -234,30 +234,8 @@
 
 	DataStore.prototype.query = function(obj) {
         if(this.path == "/") throw "Can't execute I/O to root.";
-        //return this.firebase.child(this.path);
         return new Query(this.firebase, this.path, obj);
 	}
-
-    /*
-    * Queryは完全にfirebase準拠. milkcocoaに寄せられず
-    *
-    * https://www.firebase.com/docs/web/api/query/
-    *
-    * on(eventType, callback, [cancelCallback], [context])
-    * off([eventType], [callback], [context])
-    * once(eventType, successCallback, [failureCallback], [context])
-    * orderByChild(key)
-    * orderByKey()
-    * orderByValue()
-    * orderByPriority()
-    * startAt(value, [key])
-    * endAt(value, [key])
-    * equalTo(value, [key])
-    * limitToFirst(limit)
-    * limitToLast(limit)
-    * limit(limit)
-    * ref()
-    */
 
     function Query(firebase, path, obj) {
         var self = this;
