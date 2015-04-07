@@ -1,4 +1,7 @@
 (function(global){
+    /*
+    * Util
+    */
 	var myconsole = {
 		log : function(v1, v2) {
 			if(window.console) console.log(v1, v2);
@@ -7,25 +10,33 @@
 			if(window.console) console.error(v1, v2);
 		}
 	}
+    Object.prototype.values = function(){var o=this;var r=[];for(var k in o) if(o.hasOwnProperty(k)){r.push(o[k])}return r};
+    Object.prototype.keys   = function(){var o=this;var r=[];for(var k in o) if(o.hasOwnProperty(k)){r.push(  k )}return r};
+    function uniqueID() {
+      function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000)
+          .toString(16)
+          .substring(1);
+      }
+      return s4() + s4() + s4() + s4() + s4() + s4() + s4() + s4();
+    }
+
 
     /*
     * MilkCocoa
     */
 	function MilkCocoa(firebase_id, pubnub_pubkey, pubnub_subkey) {
-        this.firebase = new Firebase("https://"+firebase_id+".firebaseio.com/");
-        this.pubnub = PUBNUB.init({
+        this.client = {};
+        this.client.firebase = new Firebase("https://"+firebase_id+".firebaseio.com/");
+        this.client.pubnub = PUBNUB.init({
             publish_key: pubnub_pubkey,
             subscribe_key: pubnub_subkey
         });
 	}
 
-	MilkCocoa.prototype.dataStore = function(path) {
-		return new DataStore(this, path);
-	}
-
 	MilkCocoa.prototype.addAccount = function(email, password, options, cb) {
         if(options) options = {};
-        this.firebase.createUser({
+        firebase.createUser({
             "email": email,
             "password": password
         }, function(error, userData) {
@@ -51,7 +62,7 @@
     }
 
 	MilkCocoa.prototype.login = function(email, password, cb) {
-        this.firebase.authWithPassword({
+        firebase.authWithPassword({
             "email": email,
             "password": password
         }, function(error, authData) {
@@ -65,17 +76,27 @@
         });
 	}
 
-	MilkCocoa.prototype.logout = function(cb) {
-        this.firebase.unauth();
+	MilkCocoa.prototype.logout = function() {
+        firebase.unauth();
 	}
 
 	MilkCocoa.prototype.getCurrentUser = function(cb) {
-        var authData = this.firebase.getAuth();
+        var authData = firebase.getAuth();
         if(authData){
             cb(null, authData);
         } else {
             cb(1, null);
         }
+	}
+
+    MilkCocoa.prototype.unleash = function(name){
+        if(name.toLowerCase() == "pubnub") return this.client.pubnub;
+        else if(name.toLowerCase() == "firebase") return this.client.firebase;
+        else throw "invalid unleash keyword";
+    }
+
+	MilkCocoa.prototype.dataStore = function(path) {
+		return new DataStore(this, path);
 	}
 
     /*
@@ -84,8 +105,8 @@
 	function DataStore(milkcocoa, path) {
         if(path.length < 1) throw "invalid path";
         this.milkcocoa = milkcocoa;
-        this.firebase = this.milkcocoa.firebase;
-        this.pubnub = this.milkcocoa.pubnub;
+        this.firebase = this.milkcocoa.client.firebase;
+        this.pubnub = this.milkcocoa.client.pubnub;
         this.path = path;
         this.onCallbacks = {};
         this.onCallbacks[this.path] = {};
@@ -94,9 +115,9 @@
 	DataStore.prototype.push = function(params, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
         if(params.hasOwnProperty("id")) throw "push value cannot have id";
+        params._type = "push";
 
-        var self = this;
-        var pushedDS = self.firebase.child(self.path).push();
+        var pushedDS = this.firebase.child(self.path).push();
         pushedDS.set(params);
         params.id = pushedDS.toString();
         if(cb) cb(params);
@@ -105,25 +126,29 @@
 	DataStore.prototype.set = function(id, params, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
         if(params == null || params.hasOwnProperty("id")) throw "invalid argument";
+        params._type = "set";
 
-        var self = this;
-        self.firebase.child(self.path+"/"+id).set(params);
+        this.firebase.child(self.path+"/"+id).set(params);
         params.id = id;
         if(cb) cb(params);
 	}
 
 	DataStore.prototype.send = function(params, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
+        params._type = "send";
+
         var self = this;
-        self.pubnub.publish({channel : self.path, message : params});
+        this.pubnub.publish({channel : self.path, message : params});
         if(cb) cb(params);
 	}
 
 	DataStore.prototype.remove = function(id, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
+        params._type = "send";
+
         var self = this;
-        if(cb) self.firebase.child(self.path+"/"+id).remove(cb);
-        else self.firebase.child(self.path+"/"+id).remove();
+        if(cb) this.firebase.child(self.path+"/"+id).remove(cb);
+        else this.firebase.child(self.path+"/"+id).remove();
 	}
 
 	DataStore.prototype.get = function(id) {
@@ -152,31 +177,44 @@
 	DataStore.prototype.on = function(event, cb) {
         var self = this;
         if(event == "send") {
-            self.pubnub.subscribe({
+            this.pubnub.subscribe({
                 channel : self.path,
                 message : function(data){ cb(null, data); },
                 error : function(error){ cb(error, null); }
             });
         } else if (event == "push") {
-            self.onCallbacks[self.path][event] = self.firebase.child(self.path).on("child_added", function(childSnapshot){
+            self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_added", function(childSnapshot){
                 var obj = {};
                 obj.id = childSnapshot.key();
                 obj.value = childSnapshot.val();
-                cb(null, obj);
+                if(obj.value._type == event){
+                    cb(null, obj);
+                } else {
+                    throw "respond with wrong type";
+                }
             });
         } else if (event == "set") {
-            self.onCallbacks[self.path][event] = self.firebase.child(self.path).on("child_changed", function(childSnapshot, prevChildName){
+            // setのchild_addedになるケースが曲者
+            self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_changed", function(childSnapshot, prevChildName){
                 var obj = {};
                 obj.id = childSnapshot.key();
                 obj.value = childSnapshot.val();
-                cb(null, obj);
+                if(obj.value._type == event){
+                    cb(null, obj);
+                } else {
+                    throw "respond with wrong type";
+                }
             });
         } else if (event == "remove") {
-            self.onCallbacks[self.path][event] = self.firebase.child(self.path).on("child_removed", function(oldChildSnapshot){
+            self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_removed", function(oldChildSnapshot){
                 var obj = {};
                 obj.id = oldChildSnapshot.key();
                 obj.value = oldChildSnapshot.val();
-                cb(null, obj);
+                if(obj.value._type == event){
+                    cb(null, obj);
+                } else {
+                    throw "respond with wrong type";
+                }
             });
         }
 	}
@@ -184,26 +222,26 @@
 	DataStore.prototype.off = function(event, cb) {
         var self = this;
         if(event == "send") {
-            self.pubnub.unsubscribe({
+            this.pubnub.unsubscribe({
                 channel : self.path
             });
         } else if (event == "push") {
             // TODO
-            self.firebase.child(self.path).off("child_added", self.onCallbacks[self.path][event]);
+            this.firebase.child(self.path).off("child_added", self.onCallbacks[self.path][event]);
         } else if (event == "set") {
-            self.firebase.child(self.path).off("child_changed", self.onCallbacks[self.path][event]);
+            this.firebase.child(self.path).off("child_changed", self.onCallbacks[self.path][event]);
         } else if (event == "remove") {
-            self.firebase.child(self.path).off("child_removed", self.onCallbacks[self.path][event]);
+            this.firebase.child(self.path).off("child_removed", self.onCallbacks[self.path][event]);
         }
         if(cb) cb();
         else return true;
 	}
 
-	DataStore.prototype.query = function() {
+	DataStore.prototype.query = function(obj) {
         if(this.path == "/") throw "Can't execute I/O to root.";
-        return this.firebase.child(this.path);
+        //return this.firebase.child(this.path);
+        return new Query(this.firebase, this.path, obj);
 	}
-
 
     /*
     * Queryは完全にfirebase準拠. milkcocoaに寄せられず
@@ -225,6 +263,48 @@
     * limit(limit)
     * ref()
     */
+
+    function Query(firebase, path, obj) {
+        var self = this;
+        if(obj) {
+            console.log(obj.values);
+            self.firebase = firebase;
+            self.path = path;
+            self.query = self.firebase.child(self.path).orderByPriority();
+        } else {
+            throw "no query object";
+        }
+    }
+
+    Query.prototype.sort = function(str){
+        var self = this;
+        if(str == "asc"){
+            return self.query.orderByPriority();
+        } else if(str == "desc") {
+            return self.query.orderByPriority();
+        } else {
+            throw "invalid order identifier";
+        }
+    }
+
+    Query.prototype.limit = function(i){
+        var self = this;
+        if(self.asc){
+            self.query = self.query.limitToFirst(i);
+            return self.query;
+        } else {
+            self.query = self.query.limitToLast(i);
+            return self.query;
+        }
+    }
+
+    Query.prototype.done = function(cb){
+        this.query.once("value", function(snap){
+            var obj = {};
+            obj[snap.key()] = snap.val();
+            cb(obj);
+        });
+    }
 
 	global.MilkCocoa = MilkCocoa;
 	global.myconsole = myconsole;
