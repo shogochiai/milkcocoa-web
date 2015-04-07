@@ -219,14 +219,12 @@
 	DataStore.prototype.off = function(event, cb) {
         var self = this;
         if(event == "send") {
-            this.pubnub.unsubscribe({
-                channel : self.path
-            });
+            this.pubnub.unsubscribe({ channel : self.path });
         } else if (event == "push") {
-            // TODO
             this.firebase.child(self.path).off("child_added", self.onCallbacks[self.path][event]);
         } else if (event == "set") {
-            this.firebase.child(self.path).off("child_changed", self.onCallbacks[self.path][event]);
+            this.firebase.child(self.path).off("child_added", self.onCallbacks[self.path][event]["added"]);
+            this.firebase.child(self.path).off("child_changed", self.onCallbacks[self.path][event]["changed"]);
         } else if (event == "remove") {
             this.firebase.child(self.path).off("child_removed", self.onCallbacks[self.path][event]);
         }

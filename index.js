@@ -20,13 +20,14 @@
         console.log(data);
     });
 
-    /*
-    var cb = function(){};
+    /**/
+    var cb = function(dataSnapshot){ console.log(dataSnapshot) };
+    var setcb = function(dataSnapshot, prevSnapshot){ console.log(dataSnapshot, prevSnapshot) };
     //ds.off("push", cb);
-    ds.off("set", cb);
-    ds.off("send", cb);
-    ds.off("remove", cb);
-    */
+    ds.off("set", setcb); // offsetだけおかしい
+    //ds.off("send", cb);
+    //ds.off("remove", cb);
+    /**/
 
     pushInput.addEventListener("keypress", function(e){
         if(e.keyCode == 13) ds.push({data: pushInput.value});
