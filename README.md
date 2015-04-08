@@ -1,4 +1,4 @@
-# milkpubfire
+# milkcocoa-web
 Alternative easy BaaS interface using Firebase and PubNub.
 
 ## purpose
