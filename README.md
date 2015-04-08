@@ -1,17 +1,14 @@
 # milkcocoa-web
-Alternative easy BaaS interface using Firebase and PubNub.
+[Milkcocoa](https://mlkcca.com/) portable interface. And also, yet another Firebase and PubNub interface.
 
 ## purpose
-This BaaS client enable you to use Firebase(Storing/Auth) and PubNub(Sync) with simpler API.
+This BaaS client enable you to use Firebase(Storing/Auth) and PubNub(Sync) with easiest API.
 
 ## interfase
 
-### document
-Completely based on [milkcocoa's API](https://mlkcca.com/document/api-js.html)
+### Summary
 
-### introduction
-
-MilkCocoa Object
+MilkCocoa Object (Auth and DataStore)
 - new MilkCocoa()
 - dataStore()
 - addAccount()
@@ -19,7 +16,7 @@ MilkCocoa Object
 - logout()
 - getCurrentUser()
 
-DataStore Object
+DataStore Object (store, broadcast and query)
 - push()
 - set()
 - remove()
@@ -32,11 +29,15 @@ DataStore Object
 - parent()
 - root()
 
-Query Object
+Query Object (search)
 - done()
 - limit()
 - skip()
 - sort()
+
+### full document
+Completely based on [milkcocoa's API](https://mlkcca.com/document/api-js.html)
+
 
 ## usage
 
