@@ -1,26 +1,26 @@
 (function(global){
-	var myconsole = {
-		log : function(v1, v2) {
-			if(window.console) console.log(v1, v2);
-		},
-		error : function(v1, v2) {
-			if(window.console) console.error(v1, v2);
-		}
-	}
+    var myconsole = {
+        log : function(v1, v2) {
+            if(window.console) console.log(v1, v2);
+        },
+        error : function(v1, v2) {
+            if(window.console) console.error(v1, v2);
+        }
+    }
 
     /*
-    * MilkCocoa
-    */
-	function MilkCocoa(firebase_id, pubnub_pubkey, pubnub_subkey) {
+     * MilkCocoa
+     */
+    function MilkCocoa(firebase_id, pubnub_pubkey, pubnub_subkey) {
         this.client = {};
         this.client.firebase = new Firebase("https://"+firebase_id+".firebaseio.com/");
         this.client.pubnub = PUBNUB.init({
             publish_key: pubnub_pubkey,
             subscribe_key: pubnub_subkey
         });
-	}
+    }
 
-	MilkCocoa.prototype.addAccount = function(email, password, options, cb) {
+    MilkCocoa.prototype.addAccount = function(email, password, options, cb) {
         if(options) options = {};
         firebase.createUser({
             "email": email,
@@ -28,17 +28,17 @@
         }, function(error, userData) {
             if (error) {
                 switch (error.code) {
-                    case "EMAIL_TAKEN":
-                        console.log("The new user account cannot be created because the email is already in use.");
-                        cb(1, null);
-                        break;
-                    case "INVALID_EMAIL":
-                        console.log("The specified email is not a valid email.");
-                        cb(2, null);
-                        break;
-                    default:
-                        cb(3, null);
-                        console.log("Error creating user:", error);
+                case "EMAIL_TAKEN":
+                    console.log("The new user account cannot be created because the email is already in use.");
+                    cb(1, null);
+                    break;
+                case "INVALID_EMAIL":
+                    console.log("The specified email is not a valid email.");
+                    cb(2, null);
+                    break;
+                default:
+                    cb(3, null);
+                    console.log("Error creating user:", error);
                 }
             } else {
                 cb(null, userData);
@@ -47,7 +47,7 @@
         });
     }
 
-	MilkCocoa.prototype.login = function(email, password, cb) {
+    MilkCocoa.prototype.login = function(email, password, cb) {
         firebase.authWithPassword({
             "email": email,
             "password": password
@@ -60,20 +60,20 @@
                 cb(null, authData);
             }
         });
-	}
+    }
 
-	MilkCocoa.prototype.logout = function() {
+    MilkCocoa.prototype.logout = function() {
         firebase.unauth();
-	}
+    }
 
-	MilkCocoa.prototype.getCurrentUser = function(cb) {
+    MilkCocoa.prototype.getCurrentUser = function(cb) {
         var authData = firebase.getAuth();
         if(authData){
             cb(null, authData);
         } else {
             cb(1, null);
         }
-	}
+    }
 
     MilkCocoa.prototype.unleash = function(name){
         if(name.toLowerCase() == "pubnub") return this.client.pubnub;
@@ -81,14 +81,14 @@
         else throw "invalid unleash keyword";
     }
 
-	MilkCocoa.prototype.dataStore = function(path) {
-		return new DataStore(this, path);
-	}
+    MilkCocoa.prototype.dataStore = function(path) {
+        return new DataStore(this, path);
+    }
 
     /*
-    * DataStore
-    */
-	function DataStore(milkcocoa, path) {
+     * DataStore
+     */
+    function DataStore(milkcocoa, path) {
         if(path.length < 1) throw "invalid path";
         this.milkcocoa = milkcocoa;
         this.firebase = this.milkcocoa.client.firebase;
@@ -96,9 +96,9 @@
         this.path = path;
         this.onCallbacks = {};
         this.onCallbacks[this.path] = {};
-	}
+    }
 
-	DataStore.prototype.push = function(params, cb) {
+    DataStore.prototype.push = function(params, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
         if(params.hasOwnProperty("id")) throw "push value cannot have id";
         params._type = "push";
@@ -108,9 +108,9 @@
 
         pushedDS.set(params);
         if(cb) cb(params);
-	}
+    }
 
-	DataStore.prototype.set = function(id, params, cb) {
+    DataStore.prototype.set = function(id, params, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
         if(params == null || params.hasOwnProperty("id")) throw "invalid argument";
         params._type = "set";
@@ -119,9 +119,9 @@
         var self = this;
         this.firebase.child(self.path+"/"+id).set(params);
         if(cb) cb(params);
-	}
+    }
 
-	DataStore.prototype.send = function(params, cb) {
+    DataStore.prototype.send = function(params, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
         params._type = "send";
         params._date = Date.now();
@@ -129,40 +129,40 @@
         var self = this;
         this.pubnub.publish({channel : self.path, message : params});
         if(cb) cb(params);
-	}
+    }
 
-	DataStore.prototype.remove = function(id, cb) {
+    DataStore.prototype.remove = function(id, cb) {
         if(this.path == "/") throw "Can't execute I/O to root.";
 
         var self = this;
         if(cb) this.firebase.child(self.path+"/"+id).remove(cb);
         else this.firebase.child(self.path+"/"+id).remove();
-	}
+    }
 
-	DataStore.prototype.get = function(id) {
+    DataStore.prototype.get = function(id) {
         if(this.path == "/") throw "Can't execute I/O to root.";
-	}
+    }
 
-	DataStore.prototype.child = function(child_path) {
+    DataStore.prototype.child = function(child_path) {
         var self = this;
         var new_path = self.path+"/"+child_path;
         return new DataStore(self.milkcocoa, new_path);
-	}
+    }
 
-	DataStore.prototype.parent = function() {
+    DataStore.prototype.parent = function() {
         if(this.path == "/") throw "Can't execute I/O to root.";
         var self = this;
         var array = self.path.split("/");
         array.pop();
         self.path = array.join("/");
         return self;
-	}
+    }
 
-	DataStore.prototype.root = function() {
+    DataStore.prototype.root = function() {
         return this.milkcocoa.dataStore("/");
-	}
+    }
 
-	DataStore.prototype.on = function(event, cb) {
+    DataStore.prototype.on = function(event, cb) {
         var self = this;
         if(event == "send") {
             this.pubnub.subscribe({
@@ -214,9 +214,9 @@
                 cb(null, obj);
             });
         }
-	}
+    }
 
-	DataStore.prototype.off = function(event, cb) {
+    DataStore.prototype.off = function(event, cb) {
         var self = this;
         if(event == "send") {
             this.pubnub.unsubscribe({ channel : self.path });
@@ -230,12 +230,12 @@
         }
         if(cb) cb();
         else return true;
-	}
+    }
 
-	DataStore.prototype.query = function(obj) {
+    DataStore.prototype.query = function(obj) {
         if(this.path == "/") throw "Can't execute I/O to root.";
         return new Query(this.firebase, this.path, obj);
-	}
+    }
 
     function Query(firebase, path, obj) {
         var self = this;
@@ -264,7 +264,7 @@
         });
     }
 
-	global.MilkCocoa = MilkCocoa;
-	global.myconsole = myconsole;
+    global.MilkCocoa = MilkCocoa;
+    global.myconsole = myconsole;
 
 }(window));
