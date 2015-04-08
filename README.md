@@ -63,4 +63,4 @@ Visit to [firebase](firebase.com)&[pubnub](pubnub.com) to get three keys.
 Firebase dashboard enables you to check your stored data.
 
 ## License
-Milkpubfire is released under the [MIT License](http://opensource.org/licenses/MIT).
+milkcocoa-web is released under the [MIT License](http://opensource.org/licenses/MIT).
