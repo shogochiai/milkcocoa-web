@@ -6,16 +6,16 @@
     var sendInput = document.getElementById("send");
     var removeInput = document.getElementById("remove");
 
-    ds.on("push", function(err, data){
+    ds.on("push", function(data){
         console.log(data);
     });
-    ds.on("set", function(err, data){
+    ds.on("set", function(data){
         console.log(data);
     });
-    ds.on("send", function(err, data){
+    ds.on("send", function(data){
         console.log(data);
     });
-    ds.on("remove", function(err, data){
+    ds.on("remove", function(data){
         console.log(data);
     });
 

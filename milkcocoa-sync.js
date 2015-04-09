@@ -28,8 +28,8 @@
         if(event == "send") {
             milkcocoa.pubnub.subscribe({
                 channel : self.path,
-                message : function(data){ cb(null, data); },
-                error : function(error){ cb(error, null); }
+                message : function(data){ cb(data); },
+                error : function(error){ cb(null); }
             });
         }
     }

@@ -167,8 +167,8 @@
         if(event == "send") {
             this.pubnub.subscribe({
                 channel : self.path,
-                message : function(data){ cb(null, data); },
-                error : function(error){ cb(error, null); }
+                message : function(data){ cb(data); },
+                error : function(error){ cb(null); }
             });
         } else if (event == "push") {
             self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_added", function(childSnapshot){
