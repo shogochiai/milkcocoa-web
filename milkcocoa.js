@@ -181,7 +181,7 @@
                 obj.value = childSnapshot.val();
 
                 if(obj.value._type == event){
-                    cb(null, obj);
+                    cb(obj);
                 } else if (obj.value.hasOwnProperty("_type")){
                     console.log("query");
                 }
@@ -194,7 +194,7 @@
                 obj.value = childSnapshot.val();
 
                 if(obj.value._type == event){
-                    cb(null, obj);
+                    cb(obj);
                 } else if (obj.value.hasOwnProperty("_type")){
                     //console.log("query");
                 }
@@ -205,7 +205,7 @@
                 obj.value = childSnapshot.val();
 
                 if(obj.value._type == event){
-                    cb(null, obj);
+                    cb(obj);
                 } else if (obj.value.hasOwnProperty("_type")){
                     console.log("query");
                 }
@@ -215,7 +215,7 @@
                 var obj = {};
                 obj.id = oldChildSnapshot.key();
                 obj.value = oldChildSnapshot.val();
-                cb(null, obj);
+                cb(obj);
             });
         }
     }
