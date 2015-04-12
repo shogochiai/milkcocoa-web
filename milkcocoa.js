@@ -18,6 +18,7 @@
             publish_key: pubnub_pubkey,
             subscribe_key: pubnub_subkey
         });
+        console.log("connected");
     }
 
     MilkCocoa.prototype.addAccount = function(email, password, options, cb) {
