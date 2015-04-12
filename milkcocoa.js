@@ -85,6 +85,10 @@
         return new DataStore(this, path);
     }
 
+    MilkCocoa.prototype.DataStore = function(path){
+        return this.dataStore(path);
+    }
+
     /*
      * DataStore
      */
@@ -192,7 +196,7 @@
                 if(obj.value._type == event){
                     cb(null, obj);
                 } else if (obj.value.hasOwnProperty("_type")){
-                    console.log("query");
+                    //console.log("query");
                 }
             });
             self.onCallbacks[self.path][event]["changed"] = this.firebase.child(self.path).on("child_changed", function(childSnapshot, prevChildName){
@@ -260,7 +264,8 @@
 
     Query.prototype.done = function(cb){
         this.query.once("value", function(snap){
-            cb(snap.val());
+            if(snap.key() == "_empty") cb([]);
+            else cb(snap.val());
         });
     }
 
