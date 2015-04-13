@@ -182,6 +182,8 @@
         }
 
         function discardInitData(firebase_event, milkcocoa_event, cb){
+            /* For discard Firebase initial event */
+            /* But after 2s, milkcocoa permit to broadcast */
             self.firebase.child(self.path).once(firebase_event, function(snapshot) {
                 var firstCalledTime = Date.now() - loadedTime;
                 if(firstCalledTime > 2000) returnData(snapshot, milkcocoa_event, cb);
