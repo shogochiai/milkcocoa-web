@@ -12,12 +12,14 @@
      * MilkCocoa
      */
     function MilkCocoa(firebase_id, pubnub_pubkey, pubnub_subkey) {
-        this.client = {};
-        this.client.firebase = new Firebase("https://"+firebase_id+".firebaseio.com/");
-        this.client.pubnub = PUBNUB.init({
+        var self = this;
+        self.client = {};
+        self.client.firebase = new Firebase("https://"+firebase_id+".firebaseio.com/");
+        self.client.pubnub = PUBNUB.init({
             publish_key: pubnub_pubkey,
             subscribe_key: pubnub_subkey
         });
+
         console.log("connected");
     }
 
@@ -101,6 +103,7 @@
         this.path = path;
         this.onCallbacks = {};
         this.onCallbacks[this.path] = {};
+        this.broadcastable = false;
     }
 
     DataStore.prototype.push = function(params, cb) {
@@ -109,7 +112,7 @@
         params._type = "push";
         var self = this;
         var pushedDS = this.firebase.child(self.path).push();
-        params.id = pushedDS.toString();
+        params.id = pushedDS.toString().split("/").pop();
 
         pushedDS.set(params);
         if(cb) cb(params);
@@ -122,7 +125,7 @@
         params.id = id;
 
         var self = this;
-        this.firebase.child(self.path+"/"+id).set(params);
+        this.firebase.child(self.path+"/"+id).update(params);
         if(cb) cb(params);
     }
 
@@ -169,6 +172,23 @@
 
     DataStore.prototype.on = function(event, cb) {
         var self = this;
+        var loadedTime = Date.now();
+
+        function returnData(snap, event, cb){
+            var obj = {};
+            obj.id = snap.key();
+            obj.value = snap.val();
+            if(obj.value._type == event) cb(obj);
+        }
+
+        function discardInitData(firebase_event, milkcocoa_event, cb){
+            self.firebase.child(self.path).once(firebase_event, function(snapshot) {
+                var firstCalledTime = Date.now() - loadedTime;
+                if(firstCalledTime > 2000) returnData(snapshot, milkcocoa_event, cb);
+                self.broadcastable = true;
+            });
+        }
+
         if(event == "send") {
             this.pubnub.subscribe({
                 channel : self.path,
@@ -176,41 +196,27 @@
                 error : function(error){ cb(null); }
             });
         } else if (event == "push") {
-            self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_added", function(childSnapshot){
-                var obj = {};
-                obj.id = childSnapshot.key();
-                obj.value = childSnapshot.val();
 
-                if(obj.value._type == event){
-                    cb(obj);
-                } else if (obj.value.hasOwnProperty("_type")){
-                    console.log("query");
-                }
+            self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_added", function(childSnapshot){
+                if (self.broadcastable) returnData(childSnapshot, event, cb);
             });
+            discardInitData('child_added', event, cb);
+
         } else if (event == "set") {
+
+            /* When listen the item added by ds.set */
             self.onCallbacks[self.path][event] = {};
             self.onCallbacks[self.path][event]["added"] = this.firebase.child(self.path).on("child_added", function(childSnapshot, prevChildName){
-                var obj = {};
-                obj.id = childSnapshot.key();
-                obj.value = childSnapshot.val();
-
-                if(obj.value._type == event){
-                    cb(obj);
-                } else if (obj.value.hasOwnProperty("_type")){
-                    //console.log("query");
-                }
+                if (self.broadcastable) returnData(childSnapshot, event, cb);
             });
+            discardInitData('child_added', event, cb);
+
+            /* When listen the item changed by ds.set */
             self.onCallbacks[self.path][event]["changed"] = this.firebase.child(self.path).on("child_changed", function(childSnapshot, prevChildName){
-                var obj = {};
-                obj.id = childSnapshot.key();
-                obj.value = childSnapshot.val();
-
-                if(obj.value._type == event){
-                    cb(obj);
-                } else if (obj.value.hasOwnProperty("_type")){
-                    console.log("query");
-                }
+                if (self.broadcastable) returnData(childSnapshot, event, cb);
             });
+            discardInitData('child_changed', event, cb);
+
         } else if (event == "remove") {
             self.onCallbacks[self.path][event] = this.firebase.child(self.path).on("child_removed", function(oldChildSnapshot){
                 var obj = {};
@@ -265,8 +271,11 @@
 
     Query.prototype.done = function(cb){
         this.query.once("value", function(snap){
-            if(snap.key() == "_empty") cb([]);
-            else cb(snap.val());
+            var result_array = [];
+            for (var key in snap.val()){
+                result_array.push(snap.val()[key]);
+            }
+            cb(result_array);
         });
     }
 
